@@ -3,7 +3,7 @@
 # 📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘
 
 from transformers import PretrainedConfig
-
+import torch
 
 class MiniMindConfig(PretrainedConfig):
     model_type = "minimind"
@@ -37,6 +37,7 @@ class MiniMindConfig(PretrainedConfig):
             aux_loss_alpha: float = 0.01,
             seq_aux: bool = True,
             norm_topk_prob: bool = True,
+            params_dtype: torch.dtype = torch.bfloat16,
             **kwargs
     ):
         super().__init__(**kwargs)
@@ -77,6 +78,19 @@ class MiniMindConfig(PretrainedConfig):
         self.seq_aux = seq_aux  # 是否在序列级别上计算辅助损失
         self.norm_topk_prob = norm_topk_prob  # 是否标准化top-k概率
 
+        # megatron 配置
+        self.deterministic_mode = True
+        self.use_cpu_initialization = False
+        self.params_dtype = params_dtype
+        self.perform_initialization = True
+        
+        self.expert_model_parallel_size = 0
+        self.sequence_parallel = False
+        self.gradient_accumulation_fusion = False
+        self.skip_bias_add = False
+        self.defer_embedding_wgrad_compute = False
+        self._cpu_offloading_context = None
+        # self.params_dtype = 
 
 # 📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘📘
 #                                             MiniMind Model

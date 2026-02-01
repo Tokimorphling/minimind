@@ -17,6 +17,10 @@ from model.model_minimind import MiniMindConfig
 from dataset.lm_dataset import SFTDataset
 from trainer.trainer_utils import get_lr, Logger, is_main_process, lm_checkpoint, init_distributed_mode, setup_seed, init_model, SkipBatchSampler
 
+
+from optim.optimizer import get_optimizer
+
+
 warnings.filterwarnings('ignore')
 
 
@@ -95,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_wandb", action="store_true", help="是否使用wandb")
     parser.add_argument("--wandb_project", type=str, default="MiniMind-Full-SFT", help="wandb项目名")
     parser.add_argument("--use_compile", default=0, type=int, choices=[0, 1], help="是否使用torch.compile加速（0=否，1=是）")
+    parser.add_argument('--optimizer', default="adamw", type=str, choices=['adamw', 'muon'])
     args = parser.parse_args()
 
     # ========== 1. 初始化环境和随机种子 ==========
@@ -118,7 +123,7 @@ if __name__ == "__main__":
         import swanlab as wandb
         wandb_id = ckp_data.get('wandb_id') if ckp_data else None
         resume = 'must' if wandb_id else None
-        wandb_run_name = f"MiniMind-Full-SFT-Epoch-{args.epochs}-BatchSize-{args.batch_size}-LearningRate-{args.learning_rate}"
+        wandb_run_name = f"MiniMind-Full-SFT-Epoch-{args.epochs}-BatchSize-{args.batch_size}-LearningRate-{args.learning_rate}-Opt-{args.optimizer}"
         wandb.init(project=args.wandb_project, name=wandb_run_name, id=wandb_id, resume=resume)
     
     # ========== 5. 定义模型、数据、优化器 ==========
@@ -129,8 +134,8 @@ if __name__ == "__main__":
     train_ds = SFTDataset(args.data_path, tokenizer, max_length=args.max_seq_len)
     train_sampler = DistributedSampler(train_ds) if dist.is_initialized() else None
     scaler = torch.cuda.amp.GradScaler(enabled=(args.dtype == 'float16'))
-    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
-    
+    # optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
+    optimizer = get_optimizer(args.optimizer, model, lr=args.learning_rate) 
     # ========== 6. 从ckp恢复状态 ==========
     start_epoch, start_step = 0, 0
     if ckp_data:
